@@ -1,5 +1,5 @@
 import ContenedorMemoria from "../../ContenedorMemoria.js";
-import { carritos } from "../../db/memoria.js";
+import { carritos } from "../../../db/memoria.js";
 
 class CarritoDaoMemoria extends ContenedorMemoria {
   constructor() {

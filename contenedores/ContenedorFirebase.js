@@ -1,6 +1,5 @@
-const { database } = require("firebase-admin");
-let admin = require("firebase-admin");
-let serviceAccount = require("../db/backend-segunda-entrega-3bd2b-firebase-adminsdk-xxnh8-20613a2d51.json");
+import admin from 'firebase-admin';
+import serviceAccount from '../db/backend-segunda-entrega-3bd2b-firebase-adminsdk-xxnh8-20613a2d51.js';
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),

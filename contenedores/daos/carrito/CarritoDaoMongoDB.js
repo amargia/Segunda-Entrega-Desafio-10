@@ -1,5 +1,5 @@
 import ContenedorMongoDB from "../../ContenedorMongoDB.js";
-import { Cart } from "../../models/Carts.js";
+import { Cart } from "../../models/Cart.js";
 
 class CarritoDaoMongoDB extends ContenedorMongoDB {
   constructor() {
