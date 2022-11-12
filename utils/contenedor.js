@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 
-const list = async(ruta) => {
+const list = async (ruta) => {
     try {
         const data = await fs.readFileSync(ruta, 'utf8');
         const jsonData = JSON.parse(data);

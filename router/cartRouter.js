@@ -1,47 +1,131 @@
-import express from "express";
 import { Router } from "express";
+import auth from "../middlewares/auth.js"
+
+import { logger } from "../logs/loggers.js";
 
 const cart = Router();
 
-import { carritoDao } from "../contenedores/daos/index.js";
 
-cart.get("/", (req, res) => {
-    carritoDao.list()
+import { carritoDao } from "../contenedores/daos/index.js";
+import { productosDao } from "../contenedores/daos/index.js";
+import { usuariosDao } from "../contenedores/daos/index.js";
+
+import { sendMailPurchase } from "../middlewares/nodemailer.js";
+import { sendSMS } from "../middlewares/twilio.js";
+
+cart.get("/list", async (req, res) => {
+    const carts = await carritoDao.list()
+    res.status(200).send(carts);
+})
+
+cart.get("/:id/productos", auth, (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+    let id = req.params.id;
+    carritoDao.getById(id)
     .then((data) => {
-    res.status(200).send(data);
+        logger.info(`Ruta /carrito - ${method} [${time}]`)
+        res.status(201).json(data);
     });
 })
 
-cart.get("/:id/productos", (req, res) => {
-    carritoDao.getById(req.params.id)
-    .then((data) => {
-    res.status(201).json(data);
-    });
+cart.get("/", auth, async (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    const carts = await carritoDao.list();
+    const cart = carts.find(el => el.userId == req.user._id)
+    const datosUsuario = await usuariosDao.getById(req.user._id);
+    logger.info(`Ruta /carrito - ${method} [${time}]`)
+    res.status(200).send({cart, userData: datosUsuario});
 })
 
 cart.post("/", (req, res) => {
-    const { id, timestamp, productos } = req.body;
-    carritoDao.add({ id, timestamp, productos })
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    let userId = req.body.userId
+    carritoDao.save(userId)
     .then((data) => {
-    res.status(201).json(data);
+        logger.info(`Ruta /carrito - ${method} [${time}]`)
+        res.status(201).json(data);
     });
 });
 
 cart.delete("/:id", (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
     let id = req.params.id;
     carritoDao.deleteById(id)
     .then((data) => {
+        logger.info(`Ruta /carrito - ${method} [${time}]`)
         res.status(201).json(data);
     })
 });
 
-cart.post("/:id/productos/", (req, res) => {
-    let idCart = req.params.id;
-    const { name, description, code, price, thumbnail, stock } = req.body;
-    carritoDao.addProduct(idCart, { name, description, code, price, thumbnail, stock })
+cart.post("/:idCarrito/:idProducto/", async (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    let idCart = req.params.idCarrito;
+    let idProduct = req.params.idProducto;
+
+    const product = await productosDao.getById(idProduct)
+    carritoDao.addProduct(idCart, product)
     .then((data) => {
+        logger.info(`Ruta /carrito - ${method} [${time}]`)
         res.status(201).json(data);
     })
 });
+
+cart.delete("/:idCarrito/:idProducto/", (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    let idCart = req.params.idCarrito;
+    let idProduct = req.params.idProducto;
+
+    carritoDao.deleteProduct(idCart, idProduct)
+    .then((data) => {
+        logger.info(`Ruta /carrito - ${method} [${time}]`)
+        res.status(201).json(data);
+    })
+});
+
+cart.post("/checkout", async (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    const datosUsuario = await usuariosDao.getById(req.user._id);
+    const username = datosUsuario.username;
+    const email = datosUsuario.email;
+    const phone = datosUsuario.phone;
+
+    const carts = await carritoDao.list()
+    const cart = carts.find(cart => cart.userId == req.user._id)
+    const products = cart.products;
+
+    const total = products.reduce((acc, product) => acc + product.price, 0);
+
+    const id = req.body.cartId
+
+    const data = {
+        username,
+        email,
+        products,
+        total
+    }
+
+    sendMailPurchase(data);
+    sendSMS(phone);
+
+    carritoDao.deleteAllProducts(id)
+    .then((data) => {
+        logger.info(`Compra realizada con éxito - ${method} [${time}]`)
+        res.redirect("/")
+    })
+});
+
 
 export { cart };

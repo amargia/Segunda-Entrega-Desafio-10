@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
+import config from "../config/config.js"
 
 try {
-    const url = "mongodb://localhost:27017/contenedores";
+    const url = config.mongoUrl;
     mongoose.connect(url)
     console.log("Conectado a MongoDB");
     } catch (error) {
@@ -33,6 +34,8 @@ class ContenedorMongoDB {
 
     async save(item) {
         try {
+            let timestamp = new Date().getTime();
+            item.timestamp = timestamp
             const newItem = new this.model(item);
             await newItem.save();
             return newItem;
@@ -52,6 +55,8 @@ class ContenedorMongoDB {
 
     async changeById(id, item) {
         try {
+            let timestamp = new Date().getTime();
+            item.timestamp = timestamp
             const newItem = await this.model.findOneAndUpdate({ id: id }, item);
             return `Elemento actualizado correctamente: ${newItem}`;
         } catch (error) {

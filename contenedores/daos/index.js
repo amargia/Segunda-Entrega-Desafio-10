@@ -6,6 +6,7 @@ import ProductosDaoArchivo from "./productos/ProductosDaoArchivo.js";
 import CarritoDaoArchivo from "./carrito/CarritoDaoArchivo.js";
 import ProductosDaoMongoDB from "./productos/ProductosDaoMongoDB.js";
 import CarritoDaoMongoDB from "./carrito/CarritoDaoMongoDB.js";
+import UsuariosDaoMongoDB from "./usuarios/UsuariosDaoMongoDB.js";
 
 
 import dotenv from "dotenv";
@@ -13,8 +14,9 @@ dotenv.config();
 
 let productosDao;
 let carritoDao;
+let usuariosDao;
 
-switch (process.env.PERS || 'json') {
+switch (process.env.PERS || 'mongodb') {
     case 'json':
         productosDao = new ProductosDaoArchivo();
         carritoDao = new CarritoDaoArchivo();
@@ -30,7 +32,8 @@ switch (process.env.PERS || 'json') {
     case 'mongodb':
         productosDao = new ProductosDaoMongoDB();
         carritoDao = new CarritoDaoMongoDB();
+        usuariosDao = new UsuariosDaoMongoDB();
     break;
 }
 
-export { productosDao, carritoDao };
+export { productosDao, carritoDao, usuariosDao };

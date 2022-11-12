@@ -1,65 +1,113 @@
-import express from "express";
 import { Router } from "express";
+import auth from "../middlewares/auth.js";
 
 const products = Router();
 
 import { productosDao } from "../contenedores/daos/index.js";
+import { usuariosDao } from "../contenedores/daos/index.js";
 
-class Admin {
-    static isLogin() {
-    return true;
+import { logger } from "../logs/loggers.js";
+
+products.get("/", auth , async (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    const datosUsuario = await usuariosDao.getById(req.user._id);
+    const user = datosUsuario.username;
+
+    if (user.toLowerCase() !== 'admin') {
+        logger.error(`El usuario ${user} no tiene permisos para acceder a la ruta - ${method} [${time}]`);
+        res.status(403).send("No tiene permisos para acceder a esta ruta");
     }
-}
 
-products.get("/", (req, res) => {
-    productosDao.list()
-    .then((data) => {
-    res.status(200).send(data);
-    });
+    const productos = await productosDao.list();
+    logger.info(`El usuario ${user} ha accedido a la ruta /productos - ${method} [${time}]`);
+    res.render("productos", { productos, user });
 })
 
-products.get("/:id", (req, res) => {
-    productosDao.getById(req.params.id)
+products.get("/:id", auth, (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    logger.info(`Ruta /productos/:id - ${method} [${time}]`);
+    let id = req.params.id;
+    productosDao.getById(id)
     .then((data) => {
     res.status(201).json(data);
     });
 })
 
-products.post("/", (req, res) => {
-    if (Admin.isLogin()) {
-        const { name, description, code, price, thumbnail, stock } = req.body;
-        productosDao.add({ name, description, code, price, thumbnail, stock })
-        .then((data) => {
-        res.status(201).json(data);
-    })
-    } else {
-    res.status(401).json({ error: -1, descripcion: "ruta /productos/ metodo POST no autorizada" });
+products.get("/editProduct/:id", auth, async (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    const datosUsuario = await usuariosDao.getById(req.user._id);
+    const user = datosUsuario.username;
+    let id = req.params.id;
+
+    const producto = await productosDao.getById(id);
+
+    if (user.toLowerCase() !== 'admin') {
+        logger.error(`El usuario ${user} no tiene permisos para acceder a la ruta - ${method} [${time}]`);
+        res.status(403).send("No tiene permisos para acceder a esta ruta");
     }
+
+    logger.info(`Ruta /productos/editProduct/:id - ${method} [${time}]`);
+    res.render("editProduct", { id: id, producto });
+})
+
+products.post("/", auth, (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    logger.info(`Ruta /productos - ${method} [${time}]`);
+
+    const { name, username, description, code, thumbnail, price, stock } = req.body
+    productosDao.save({name, username, description, code, thumbnail, price, stock})
+    .then((data) => {
+        res.status(201).json(data);
+    });
 });
 
-products.delete("/:id", (req, res) => {
-    if (Admin.isLogin()) {
-        let id = req.params.id;
-        productosDao.deleteById(id)
-        .then((data) => {
-            res.status(201).json(data);
-        })
-    } else {
-        res.status(401).json({ error: -1, descripcion: "ruta /productos/ metodo DELETE no autorizada" });
+products.delete("/:id", auth, async (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    const datosUsuario = await usuariosDao.getById(req.user._id);
+    const user = datosUsuario.username;
+
+    if (user.toLowerCase() !== 'admin') {
+        logger.error(`El usuario ${user} no tiene permisos para acceder a la ruta - ${method} [${time}]`);
+        res.status(403).send("No tiene permisos para acceder a esta ruta");
     }
+
+    logger.info(`Ruta /productos/:id - ${method} [${time}]`);
+
+    let id = req.params.id;
+    productosDao.deleteById(id)
+    .then((data) => {
+        res.status(201).json(data);
+    });
 });
 
-products.put("/:id", (req, res) => {
-    if (Admin.isLogin()) {
-        let id = req.params.id;
-        const { name, description, code, price, thumbnail, stock } = req.body;
-        productosDao.changeById(id, { name, description, code, price, thumbnail, stock })
-        .then((data) => {
-        res.status(201).json(data);
-    })
-    } else {
-    res.status(401).json({ error: -1, descripcion: "ruta /productos/ metodo PUT no autorizada" });
+products.put("/editProduct", auth , async (req, res) => {
+    const { method } = req;
+    const time = new Date().toLocaleString();
+
+    const datosUsuario = await usuariosDao.getById(req.user._id);
+    const user = datosUsuario.username;
+
+    if (user.toLowerCase() !== 'admin') {
+        logger.error(`El usuario ${user} no tiene permisos para acceder a la ruta - ${method} [${time}]`);
+        res.status(403).send("No tiene permisos para acceder a esta ruta");
     }
+
+    const { _id, name, username, description, code, thumbnail, price, stock } = req.body
+    productosDao.updateById(_id, {name, username, description, code, thumbnail, price, stock})
+    .then((data) => {
+        logger.info(`Producto editado con éxito - Ruta /productos/editProduct - ${method} [${time}]`);
+        res.status(201).json(data);
+    });
 });
 
 export { products };
